@@ -209,6 +209,24 @@ python3 -m race_video.cli configs/overtake_keikyu_shinagawa_yokohama.json
 - 抜かれた判定は「後ろにいた列車が普通列車より前に出た瞬間」を0.02分刻みで
   調べています(CLI実行時にも一覧を表示)。
 
+### 車両アイコン(assets/ のPNG)
+
+3ネタとも、列車ごとに `"icon_path": "assets/xxx.png"` を書くと、その透過PNGが
+車両アイコンになります(進行方向=右向き推奨、回転はしません)。種別一文字の
+バッジはアイコンの隣に付きます。大きさは `"icon_width": 86`(px、省略時86)で変えられます。
+
+| video_type | 書く場所 |
+|---|---|
+| `rush` | `runs[]`(複数路線なら `lines[].runs[]`) |
+| `fare` | `routes[]` |
+| `overtake` | `local` と `passers[]` |
+
+ビルダーでは各列車の「車両アイコン」欄に `assets/xxx.png` を入れるか、「PNGを選ぶ」で
+ファイルを選ぶと `assets/<ファイル名>` が入ります(プレビュー表示用で、画像そのものは
+JSONに入りません)。**同じPNGをリポジトリの `assets/` に置いてから**生成してください。
+見つからない場合は警告を出して標準の簡易アイコンで描きます。`web/app.py` の画面から
+アイコンをアップロード・選択することもできます。
+
 ### config作成ツール(ビルダー)について
 
 `tools/rush_builder.html` / `fare_builder.html` / `overtake_builder.html` は

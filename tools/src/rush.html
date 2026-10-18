@@ -115,6 +115,7 @@ function buildConfig() {
       const tt = (r.train_type || "").trim();
       return { key: r.key, label: r.label, badge: (r.badge || r.label || "?").slice(0, 1),
         ...(tt ? { train_type: tt } : {}), ...(tt && r.type_badge ? { type_badge: r.type_badge.slice(0, 1) } : {}),
+        ...(r.icon_path ? { icon_path: r.icon_path } : {}),
         color: hexToRgb(r.color), times };
     });
     return { name: ln.name, color: hexToRgb(ln.color),
@@ -173,6 +174,7 @@ function renderLines() {
       runGrid.appendChild(el("div", { class: "subcard" }, [
         el("div", { class: "subcard-head" }, [mk("label", ri === 0 ? "列車A(例: 朝ラッシュ)" : "列車B(例: 日中)"), mk("badge", "朝/昼1文字", "tiny", { maxlength: "1" }), mk("color", "色", "tiny")]),
         el("div", { class: "subcard-head" }, [mk("train_type", "種別", "", { placeholder: "快速 / 中央特快 / 普通" }), mk("type_badge", "種別1文字", "tiny", { maxlength: "1", placeholder: (r.train_type || "").slice(0, 1) })]),
+        el("div", { class: "subcard-head" }, [iconField(r, `l${li}-r${ri}-icon`, update)]),
       ]));
     });
     card.appendChild(runGrid);
@@ -299,7 +301,7 @@ function importConfig(c) {
       if (!segs) segs = [{ line: ln.stations[0].line, preset: 0, from: ln.stations[0].name, to: ln.stations[ln.stations.length - 1].name }];
       const lc = ln.color ? rgbToHex(ln.color) : LINE_COLORS[li % 3];
       return { name: ln.name || "", color: lc, segments: segs, rows,
-        runs: ln.runs.slice(0, 2).map((r, i) => ({ key: r.key || (i ? "daytime" : "morning"), label: r.label, badge: r.badge || r.label[0],
+        runs: ln.runs.slice(0, 2).map((r, i) => ({ key: r.key || (i ? "daytime" : "morning"), label: r.label, badge: r.badge || r.label[0], icon_path: r.icon_path || "",
           train_type: r.train_type || "", type_badge: r.type_badge || "", color: r.color ? rgbToHex(r.color) : (i ? lighten(lc) : lc) })) };
     }) };
   renderAll();

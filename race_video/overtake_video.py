@@ -64,7 +64,7 @@ class Train:
         self.name = cfg.get("name", "普通" if is_local else f"列車{idx + 1}")
         self.badge = cfg.get("badge", self.name[:1])
         self.color = tuple(cfg.get("color") or ((90, 200, 255) if is_local else PASSER_PALETTE[idx % 5]))
-        self.icon = load_icon(cfg.get("icon_path"))
+        self.icon = load_icon(cfg.get("icon_path"), int(cfg.get("icon_width", 86)))
         times = cfg.get("times", {})
         sts = route["stations"]
         names = [s["name"] for s in sts]

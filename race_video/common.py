@@ -296,6 +296,10 @@ def draw_trail(canvas, pts, color, width=6, glow=18):
 # ---------------------------------------------------------------- 車両アイコン
 
 def load_icon(path, width=86):
+    """assets/ などに置いた透過PNG(進行方向=右向き推奨)を幅 width px に縮小して返す。
+    回転はしない。パスが無い/見つからない場合は None(=標準の簡易アイコン)。"""
+    if path and not os.path.exists(path):
+        print(f"[warn] 車両アイコン {path} が見つからないため、標準アイコンで描きます")
     if path and os.path.exists(path):
         img = Image.open(path).convert("RGBA")
         h = int(width * img.height / img.width)

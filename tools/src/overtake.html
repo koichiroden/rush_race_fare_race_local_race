@@ -113,8 +113,8 @@ function buildConfig() {
     video_type: "overtake", slug: state.slug, title_line1: state.title_line1, title_line2: state.title_line2,
     start_name: st[0]?.name, end_label: st[st.length - 1]?.name, video_duration_sec: Number(state.video_duration_sec) || 40,
     stations: st.map(s => ({ line: s.line, name: s.name, ...(row(s.name).popup ? { popup: true } : {}) })),
-    local: { name: state.local.name, badge: (state.local.badge || state.local.name || "普").slice(0, 1), color: hexToRgb(state.local.color), default_dwell_sec: Number(state.default_dwell_sec) || 0, times: lt },
-    passers: state.passers.map((p, pi) => ({ name: p.name, badge: (p.badge || p.name || "?").slice(0, 1), color: hexToRgb(p.color), times: passerTimes(st, pi) })),
+    local: { name: state.local.name, badge: (state.local.badge || state.local.name || "普").slice(0, 1), color: hexToRgb(state.local.color), ...(state.local.icon_path ? { icon_path: state.local.icon_path } : {}), default_dwell_sec: Number(state.default_dwell_sec) || 0, times: lt },
+    passers: state.passers.map((p, pi) => ({ name: p.name, badge: (p.badge || p.name || "?").slice(0, 1), color: hexToRgb(p.color), ...(p.icon_path ? { icon_path: p.icon_path } : {}), times: passerTimes(st, pi) })),
     _builder: { segments: state.segments },
   };
   return { config, problems, st };
@@ -172,7 +172,7 @@ function trainCard(obj, label, onDel, idx) {
   return el("div", { class: "subcard" }, [el("div", { class: "subcard-head" }, [
     mk("name", label), mk("badge", "種別1文字", "tiny", { maxlength: "1" }), mk("color", "色", "tiny"),
     onDel ? el("button", { type: "button", class: "ghost small", onclick: onDel }, ["削除"]) : null,
-  ])]);
+  ]), el("div", { class: "subcard-head" }, [iconField(obj, `tr${idx}-icon`, update)])]);
 }
 function renderTrains() {
   const box = document.getElementById("trains"); box.innerHTML = "";
@@ -284,8 +284,8 @@ function importConfig(c) {
   state = { slug: c.slug, title_line1: c.title_line1 || "", title_line2: c.title_line2 || "", video_duration_sec: c.video_duration_sec || 40,
     default_dwell_sec: c.local.default_dwell_sec ?? 30,
     segments: c._builder?.segments || [{ line: c.stations[0].line, preset: 0, from: c.stations[0].name, to: c.stations[c.stations.length - 1].name }],
-    local: { name: c.local.name || "普通", badge: c.local.badge || "普", color: rgbToHex(c.local.color || [90, 200, 255]) },
-    passers: (c.passers || []).map(p => ({ name: p.name, badge: p.badge || p.name[0], color: rgbToHex(p.color || [230, 40, 40]) })), rows };
+    local: { name: c.local.name || "普通", badge: c.local.badge || "普", icon_path: c.local.icon_path || "", color: rgbToHex(c.local.color || [90, 200, 255]) },
+    passers: (c.passers || []).map(p => ({ name: p.name, badge: p.badge || p.name[0], icon_path: p.icon_path || "", color: rgbToHex(p.color || [230, 40, 40]) })), rows };
   renderAll();
 }
 jsonTa = renderOutput(document.getElementById("out"), () => `${state.slug || "overtake"}.json`, () => jsonTa.value, importConfig);

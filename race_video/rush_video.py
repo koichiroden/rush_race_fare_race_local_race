@@ -62,7 +62,7 @@ class TimedRun:
         # 「朝ラッシュ(快速)」のような表示名
         self.full_label = f"{self.label}({self.train_type})" if self.train_type else self.label
         self.color = tuple(cfg.get("color") or DEFAULT_COLORS[idx % 2])
-        self.icon = load_icon(cfg.get("icon_path"))
+        self.icon = load_icon(cfg.get("icon_path"), int(cfg.get("icon_width", 86)))
         times_cfg = cfg.get("times", {})
         names = [s["name"] for s in route["stations"]]
         raw = monotonic_times([parse_hhmm(times_cfg.get(n)) for n in names])

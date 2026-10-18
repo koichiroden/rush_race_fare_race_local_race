@@ -84,6 +84,7 @@ input.bad { border-color: var(--danger); background: var(--danger-soft); }
 textarea.json { font-family: var(--f-mono); font-size: 12px; min-height: 200px; resize: vertical; white-space: pre; }
 
 button { font: inherit; font-size: 14px; font-weight: 700; border-radius: 8px; padding: 7px 14px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--surface); }
+button { white-space: nowrap; }
 button.ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
 button.small { font-size: 12px; padding: 4px 10px; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -8450,6 +8451,33 @@ function renderOutput(container, filenameFn, getText, onImport) {
   );
   return ta;
 }
+// 車両アイコン欄: assets/ に置いたPNGのパスを config の icon_path に入れる。
+// 「PNGを選ぶ」はファイル名を拾ってプレビューを出すだけ(画像そのものはJSONに入らないので、
+// 同じファイルをリポジトリの assets/ に置いておく)。
+const _iconPreviews = {};
+function iconField(obj, id, onChange) {
+  const txt = el("input", { type: "text", id, value: obj.icon_path || "", placeholder: "assets/xxx.png(空欄=標準アイコン)", class: "mono", autocomplete: "off" });
+  const thumb = el("img", { alt: "", style: "height:28px;max-width:80px;object-fit:contain;display:none;border-radius:4px;background:var(--surface)" });
+  const showThumb = () => { const src = _iconPreviews[obj.icon_path]; if (src) { thumb.src = src; thumb.style.display = ""; } else { thumb.removeAttribute("src"); thumb.style.display = "none"; } };
+  const norm = (v) => { v = v.trim(); if (v && !v.includes("/")) v = "assets/" + v; return v; };
+  txt.addEventListener("change", () => { obj.icon_path = norm(txt.value); txt.value = obj.icon_path; showThumb(); onChange(); });
+  const file = el("input", { type: "file", accept: "image/png", id: id + "-file", style: "display:none" });
+  file.addEventListener("change", () => {
+    const f = file.files && file.files[0]; if (!f) return;
+    obj.icon_path = "assets/" + f.name; txt.value = obj.icon_path;
+    const rd = new FileReader(); rd.onload = () => { _iconPreviews[obj.icon_path] = rd.result; showThumb(); }; rd.readAsDataURL(f);
+    onChange();
+  });
+  const pick = el("button", { type: "button", class: "ghost small", onclick: () => file.click() }, ["PNGを選ぶ"]);
+  const clear = el("button", { type: "button", class: "ghost small", onclick: () => { obj.icon_path = ""; txt.value = ""; showThumb(); onChange(); } }, ["標準に戻す"]);
+  showThumb();
+  return el("div", { class: "field", style: "flex:1 1 100%" }, [
+    el("label", { for: id }, ["車両アイコン(assets/ のPNG・右向き推奨)"]),
+    txt,
+    el("div", { class: "btn-row" }, [pick, clear, thumb, file]),
+  ]);
+}
+
 function renderProblems(container, problems) {
   container.innerHTML = "";
   if (!problems.length) { container.appendChild(el("ul", { class: "problems clear" }, [el("li", {}, ["入力OK。このJSONで動画を生成できます。"])])); return; }
@@ -8505,7 +8533,7 @@ function buildConfig() {
       else if (f !== null && i > 0) { if (f < prev) problems.push(`${r.name}: ${s.name} の運賃が手前の駅より安くなっています(確認してください)。`); prev = f; }
     });
     return {
-      key: r.key, name: r.name, short_name: r.short_name || r.name, color: hexToRgb(r.color), ...(r.badge ? { badge: r.badge.slice(0, 1) } : {}),
+      key: r.key, name: r.name, short_name: r.short_name || r.name, color: hexToRgb(r.color), ...(r.badge ? { badge: r.badge.slice(0, 1) } : {}), ...(r.icon_path ? { icon_path: r.icon_path } : {}),
       stations: st.map((s, i) => {
         const rw = rrow(r, s.name), f = fareNum(rw.fare);
         const o = { line: s.line, name: s.name };
@@ -8539,6 +8567,7 @@ function renderRoutes() {
     };
     card.appendChild(el("h2", { class: "rhead" }, [el("span", { class: "step" }, [`ルート${"ABCD"[ri]}`]), r.name || ""]));
     card.appendChild(el("div", { class: "subcard-head" }, [inp("name", "ルート名"), inp("short_name", "短い名前(グラフ用)"), inp("badge", "バッジ1文字", "tiny", { maxlength: "1" }), inp("color", "色", "tiny")]));
+    card.appendChild(el("div", { class: "subcard-head" }, [iconField(r, `r${ri}-icon`, update)]));
     const segBox = el("div", { id: `segs-${ri}` });
     card.appendChild(segBox);
     const tblWrap = el("div", { class: "table-wrap" });
@@ -8639,7 +8668,7 @@ function importConfig(c) {
     routes: c.routes.map((r, i) => {
       const rows = {}; r.stations.forEach(s => { rows[s.name] = { fare: s.fare === undefined ? "" : String(s.fare), popup: !!s.popup }; });
       const segs = segsAll[i] || [{ line: r.stations[0].line, preset: 0, from: r.stations[0].name, to: r.stations[r.stations.length - 1].name }];
-      return { key: r.key || `route_${i}`, name: r.name, short_name: r.short_name || "", badge: r.badge || "", color: rgbToHex(r.color || [120, 120, 120]), segments: segs, rows };
+      return { key: r.key || `route_${i}`, name: r.name, short_name: r.short_name || "", badge: r.badge || "", icon_path: r.icon_path || "", color: rgbToHex(r.color || [120, 120, 120]), segments: segs, rows };
     }) };
   renderAll();
 }

@@ -217,6 +217,33 @@ function renderOutput(container, filenameFn, getText, onImport) {
   );
   return ta;
 }
+// 車両アイコン欄: assets/ に置いたPNGのパスを config の icon_path に入れる。
+// 「PNGを選ぶ」はファイル名を拾ってプレビューを出すだけ(画像そのものはJSONに入らないので、
+// 同じファイルをリポジトリの assets/ に置いておく)。
+const _iconPreviews = {};
+function iconField(obj, id, onChange) {
+  const txt = el("input", { type: "text", id, value: obj.icon_path || "", placeholder: "assets/xxx.png(空欄=標準アイコン)", class: "mono", autocomplete: "off" });
+  const thumb = el("img", { alt: "", style: "height:28px;max-width:80px;object-fit:contain;display:none;border-radius:4px;background:var(--surface)" });
+  const showThumb = () => { const src = _iconPreviews[obj.icon_path]; if (src) { thumb.src = src; thumb.style.display = ""; } else { thumb.removeAttribute("src"); thumb.style.display = "none"; } };
+  const norm = (v) => { v = v.trim(); if (v && !v.includes("/")) v = "assets/" + v; return v; };
+  txt.addEventListener("change", () => { obj.icon_path = norm(txt.value); txt.value = obj.icon_path; showThumb(); onChange(); });
+  const file = el("input", { type: "file", accept: "image/png", id: id + "-file", style: "display:none" });
+  file.addEventListener("change", () => {
+    const f = file.files && file.files[0]; if (!f) return;
+    obj.icon_path = "assets/" + f.name; txt.value = obj.icon_path;
+    const rd = new FileReader(); rd.onload = () => { _iconPreviews[obj.icon_path] = rd.result; showThumb(); }; rd.readAsDataURL(f);
+    onChange();
+  });
+  const pick = el("button", { type: "button", class: "ghost small", onclick: () => file.click() }, ["PNGを選ぶ"]);
+  const clear = el("button", { type: "button", class: "ghost small", onclick: () => { obj.icon_path = ""; txt.value = ""; showThumb(); onChange(); } }, ["標準に戻す"]);
+  showThumb();
+  return el("div", { class: "field", style: "flex:1 1 100%" }, [
+    el("label", { for: id }, ["車両アイコン(assets/ のPNG・右向き推奨)"]),
+    txt,
+    el("div", { class: "btn-row" }, [pick, clear, thumb, file]),
+  ]);
+}
+
 function renderProblems(container, problems) {
   container.innerHTML = "";
   if (!problems.length) { container.appendChild(el("ul", { class: "problems clear" }, [el("li", {}, ["入力OK。このJSONで動画を生成できます。"])])); return; }

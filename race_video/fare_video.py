@@ -50,7 +50,7 @@ class FareRoute:
         self.short = cfg.get("short_name", self.name)
         self.color = tuple(cfg.get("color") or PALETTE[idx % len(PALETTE)])
         self.badge = cfg.get("badge")
-        self.icon = load_icon(cfg.get("icon_path"))
+        self.icon = load_icon(cfg.get("icon_path"), int(cfg.get("icon_width", 86)))
         self.route = route
         self.path = PolyPath(route)
         sts = route["stations"]

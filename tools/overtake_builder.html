@@ -84,6 +84,7 @@ input.bad { border-color: var(--danger); background: var(--danger-soft); }
 textarea.json { font-family: var(--f-mono); font-size: 12px; min-height: 200px; resize: vertical; white-space: pre; }
 
 button { font: inherit; font-size: 14px; font-weight: 700; border-radius: 8px; padding: 7px 14px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--surface); }
+button { white-space: nowrap; }
 button.ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
 button.small { font-size: 12px; padding: 4px 10px; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -8465,6 +8466,33 @@ function renderOutput(container, filenameFn, getText, onImport) {
   );
   return ta;
 }
+// 車両アイコン欄: assets/ に置いたPNGのパスを config の icon_path に入れる。
+// 「PNGを選ぶ」はファイル名を拾ってプレビューを出すだけ(画像そのものはJSONに入らないので、
+// 同じファイルをリポジトリの assets/ に置いておく)。
+const _iconPreviews = {};
+function iconField(obj, id, onChange) {
+  const txt = el("input", { type: "text", id, value: obj.icon_path || "", placeholder: "assets/xxx.png(空欄=標準アイコン)", class: "mono", autocomplete: "off" });
+  const thumb = el("img", { alt: "", style: "height:28px;max-width:80px;object-fit:contain;display:none;border-radius:4px;background:var(--surface)" });
+  const showThumb = () => { const src = _iconPreviews[obj.icon_path]; if (src) { thumb.src = src; thumb.style.display = ""; } else { thumb.removeAttribute("src"); thumb.style.display = "none"; } };
+  const norm = (v) => { v = v.trim(); if (v && !v.includes("/")) v = "assets/" + v; return v; };
+  txt.addEventListener("change", () => { obj.icon_path = norm(txt.value); txt.value = obj.icon_path; showThumb(); onChange(); });
+  const file = el("input", { type: "file", accept: "image/png", id: id + "-file", style: "display:none" });
+  file.addEventListener("change", () => {
+    const f = file.files && file.files[0]; if (!f) return;
+    obj.icon_path = "assets/" + f.name; txt.value = obj.icon_path;
+    const rd = new FileReader(); rd.onload = () => { _iconPreviews[obj.icon_path] = rd.result; showThumb(); }; rd.readAsDataURL(f);
+    onChange();
+  });
+  const pick = el("button", { type: "button", class: "ghost small", onclick: () => file.click() }, ["PNGを選ぶ"]);
+  const clear = el("button", { type: "button", class: "ghost small", onclick: () => { obj.icon_path = ""; txt.value = ""; showThumb(); onChange(); } }, ["標準に戻す"]);
+  showThumb();
+  return el("div", { class: "field", style: "flex:1 1 100%" }, [
+    el("label", { for: id }, ["車両アイコン(assets/ のPNG・右向き推奨)"]),
+    txt,
+    el("div", { class: "btn-row" }, [pick, clear, thumb, file]),
+  ]);
+}
+
 function renderProblems(container, problems) {
   container.innerHTML = "";
   if (!problems.length) { container.appendChild(el("ul", { class: "problems clear" }, [el("li", {}, ["入力OK。このJSONで動画を生成できます。"])])); return; }
@@ -8521,8 +8549,8 @@ function buildConfig() {
     video_type: "overtake", slug: state.slug, title_line1: state.title_line1, title_line2: state.title_line2,
     start_name: st[0]?.name, end_label: st[st.length - 1]?.name, video_duration_sec: Number(state.video_duration_sec) || 40,
     stations: st.map(s => ({ line: s.line, name: s.name, ...(row(s.name).popup ? { popup: true } : {}) })),
-    local: { name: state.local.name, badge: (state.local.badge || state.local.name || "普").slice(0, 1), color: hexToRgb(state.local.color), default_dwell_sec: Number(state.default_dwell_sec) || 0, times: lt },
-    passers: state.passers.map((p, pi) => ({ name: p.name, badge: (p.badge || p.name || "?").slice(0, 1), color: hexToRgb(p.color), times: passerTimes(st, pi) })),
+    local: { name: state.local.name, badge: (state.local.badge || state.local.name || "普").slice(0, 1), color: hexToRgb(state.local.color), ...(state.local.icon_path ? { icon_path: state.local.icon_path } : {}), default_dwell_sec: Number(state.default_dwell_sec) || 0, times: lt },
+    passers: state.passers.map((p, pi) => ({ name: p.name, badge: (p.badge || p.name || "?").slice(0, 1), color: hexToRgb(p.color), ...(p.icon_path ? { icon_path: p.icon_path } : {}), times: passerTimes(st, pi) })),
     _builder: { segments: state.segments },
   };
   return { config, problems, st };
@@ -8580,7 +8608,7 @@ function trainCard(obj, label, onDel, idx) {
   return el("div", { class: "subcard" }, [el("div", { class: "subcard-head" }, [
     mk("name", label), mk("badge", "種別1文字", "tiny", { maxlength: "1" }), mk("color", "色", "tiny"),
     onDel ? el("button", { type: "button", class: "ghost small", onclick: onDel }, ["削除"]) : null,
-  ])]);
+  ]), el("div", { class: "subcard-head" }, [iconField(obj, `tr${idx}-icon`, update)])]);
 }
 function renderTrains() {
   const box = document.getElementById("trains"); box.innerHTML = "";
@@ -8692,8 +8720,8 @@ function importConfig(c) {
   state = { slug: c.slug, title_line1: c.title_line1 || "", title_line2: c.title_line2 || "", video_duration_sec: c.video_duration_sec || 40,
     default_dwell_sec: c.local.default_dwell_sec ?? 30,
     segments: c._builder?.segments || [{ line: c.stations[0].line, preset: 0, from: c.stations[0].name, to: c.stations[c.stations.length - 1].name }],
-    local: { name: c.local.name || "普通", badge: c.local.badge || "普", color: rgbToHex(c.local.color || [90, 200, 255]) },
-    passers: (c.passers || []).map(p => ({ name: p.name, badge: p.badge || p.name[0], color: rgbToHex(p.color || [230, 40, 40]) })), rows };
+    local: { name: c.local.name || "普通", badge: c.local.badge || "普", icon_path: c.local.icon_path || "", color: rgbToHex(c.local.color || [90, 200, 255]) },
+    passers: (c.passers || []).map(p => ({ name: p.name, badge: p.badge || p.name[0], icon_path: p.icon_path || "", color: rgbToHex(p.color || [230, 40, 40]) })), rows };
   renderAll();
 }
 jsonTa = renderOutput(document.getElementById("out"), () => `${state.slug || "overtake"}.json`, () => jsonTa.value, importConfig);
